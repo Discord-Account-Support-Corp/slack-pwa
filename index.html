@@ -4,37 +4,46 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Slack Workspace</title>
+
+  <!-- PWA plumbing -->
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" type="image/png" />
   <meta name="theme-color" content="#4A154B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+
   <style>
-    body {
-      font-family: sans-serif;
-      background: #4A154B;
-      color: white;
-      text-align: center;
-      padding-top: 20vh;
-    }
-    a {
-      color: #ffffff;
-      font-weight: bold;
-      text-decoration: underline;
-    }
+    body{font-family:sans-serif;background:#4A154B;color:#fff;text-align:center;padding-top:20vh}
+    a{color:#fff;font-weight:700;text-decoration:underline}
   </style>
 </head>
 <body>
-  <h1>Redirecting to Slack…</h1>
-  <p>If you are not redirected, <a href="https://app.slack.com/client/T04JNHV1FTJ">click here to open Slack</a>.</p>
+  <h1>Opening Slack…</h1>
+  <p>If nothing happens, <a id="fallback-link"
+    href="https://app.slack.com/client/T04JNHV1FTJ">tap here</a>.</p>
 
   <script>
-    // Redirect after a short delay
-    setTimeout(() => {
-      window.location.href = "https://app.slack.com/client/T04JNHV1FTJ";
-    }, 1500);
+    /*
+     * 1. First try to open the native Slack app via slack://
+     *    (works if the app is installed on iOS or Android)
+     * 2. After 1.2 s, if we’re still on this page, fall back to the web URL.
+     */
+    (function(){
+      const TEAM_ID = "T04JNHV1FTJ";
+      const slackNative = "slack://open?team=" + TEAM_ID;
+      const slackWeb    = "https://app.slack.com/client/" + TEAM_ID;
+
+      // Try native app first
+      window.location.replace(slackNative);
+
+      // Give it time to hand off; then fall back
+      setTimeout(() => {
+        window.location.replace(slackWeb);
+      }, 1200);
+    })();
   </script>
 
   <script>
-    // Register service worker
+    // Register service worker (non-blocking)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js')
         .catch(err => console.error('SW registration failed:', err));
