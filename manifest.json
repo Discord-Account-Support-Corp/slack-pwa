@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Slack Workspace",
   "short_name": "Slack",
-  "start_url": "index.html",   // explicit, same origin
+  "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#4A154B",
