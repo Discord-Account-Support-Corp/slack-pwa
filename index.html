@@ -1,17 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Slack Workspace</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon.png" type="image/png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slack Workspace</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
   <meta name="theme-color" content="#4A154B" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #4A154B;
+      color: white;
+      text-align: center;
+      padding-top: 20vh;
+    }
+    a {
+      color: #ffffff;
+      font-weight: bold;
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-  <h1>Loading Slack...</h1>
+  <h1>Redirecting to Slack…</h1>
+  <p>If you are not redirected, <a href="https://app.slack.com/client/T04JNHV1FTJ">click here to open Slack</a>.</p>
+
   <script>
-    window.location.href = "https://app.slack.com/client/T04JNHV1FTJ";
+    // Redirect after a short delay
+    setTimeout(() => {
+      window.location.href = "https://app.slack.com/client/T04JNHV1FTJ";
+    }, 1500);
+  </script>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js')
+        .catch(err => console.error('SW registration failed:', err));
+    }
   </script>
 </body>
 </html>
