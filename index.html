@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Slack Workspace Launcher</title>
 
-  <!-- PWA plumbing -->
+  <!-- PWA bits -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png" type="image/png">
   <meta name="theme-color" content="#4A154B">
@@ -15,109 +15,71 @@
     :root{--purple:#4A154B}
     *{box-sizing:border-box;margin:0}
     body{
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
       background:var(--purple);color:#fff;text-align:center;
-      display:flex;flex-direction:column;justify-content:center;min-height:100vh;padding:1.5rem
+      display:flex;flex-direction:column;justify-content:center;
+      min-height:100vh;padding:1.5rem
     }
-    h1{font-size:1.8rem;margin-bottom:1rem}
-    button,a{font-size:1.05rem;font-weight:700;margin-top:1rem;color:#fff;
-            background:none;border:2px solid #fff;border-radius:8px;padding:.6rem 1.2rem;
-            cursor:pointer;text-decoration:none}
-    /* iOS overlay */
-    #installOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
-                    z-index:999;align-items:center;justify-content:center;text-align:center}
-    #installBox{background:var(--purple);border:2px solid #fff;border-radius:12px;
-                padding:1.5rem;max-width:310px;line-height:1.4;position:relative}
-    #closeTip{position:absolute;top:6px;right:10px;background:none;border:0;
-              color:#fff;font-size:1.4rem;cursor:pointer}
-    #shareIcon{display:inline-block;transform:rotate(90deg)}
+    h1{font-size:1.9rem;margin-bottom:1rem}
+    p{margin-bottom:1.3rem;line-height:1.4}
+    button{
+      font-size:1.1rem;font-weight:700;color:#fff;
+      background:none;border:2px solid #fff;border-radius:10px;
+      padding:.7rem 1.6rem;cursor:pointer
+    }
+    /* optional iOS hint, hidden default */
+    #iosHint{display:none;font-size:.95rem;opacity:.85}
   </style>
 </head>
 <body>
 
-  <h1 id="headline">Add Slack to your Home Screen</h1>
-  <p id="sub">After installation this launcher will open Slack automatically.</p>
-  <button id="openSlack" hidden>Open Slack now</button>
+  <h1>Slack Workspace</h1>
+  <p id="iosHint">Tip: Tap the <strong>Share ▸</strong> button and choose<br><strong>Add to Home Screen</strong> to install this app.</p>
 
-  <!-- iOS install-tip overlay -->
-  <div id="installOverlay">
-    <div id="installBox">
-      <button id="closeTip">×</button>
-      <p>
-        To install this Slack launcher:<br>
-        1.&nbsp;Tap the <span id="shareIcon">▸</span> Share button<br>
-        2.&nbsp;Choose <strong>Add to Home Screen</strong>
-      </p>
-    </div>
-  </div>
+  <button id="openSlack">Open Slack</button>
 
   <script>
-    /* ---------- constants ---------- */
-    const TEAM = "T04JNHV1FTJ";                               // your Slack team ID
-    const SLACK_NATIVE = `slack://open?team=${TEAM}`;         // opens native app if installed
+    /* --------------- constants --------------- */
+    const TEAM = "T04JNHV1FTJ";
+    const SLACK_NATIVE = `slack://open?team=${TEAM}`;
     const SLACK_WEB    = `https://app.slack.com/client/${TEAM}`;
     const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isStandalone =
           window.matchMedia('(display-mode: standalone)').matches ||
           navigator.standalone === true;
 
-    /* ---------- main flow ---------- */
+    /* --------------- runtime logic --------------- */
+    const openBtn = document.getElementById('openSlack');
+
     if (isStandalone) {
-      openSlack();
+      // Already running as an installed PWA → jump straight to Slack
+      launchSlack();
     } else {
-      showInstallScreen();
+      // Regular browser tab → show install hint (iOS only)
+      if (isIOS) document.getElementById('iosHint').style.display='block';
+
+      // User must tap the button to go to Slack
+      openBtn.onclick = launchSlack;
     }
 
-    /* ---------- functions ---------- */
-    function openSlack(){
-      // try native-scheme first
+    /* --------------- helpers --------------- */
+    function launchSlack(){
       if (isIOS) {
-        // hidden iframe avoids “address is invalid” alert
-        const ifr = document.createElement('iframe');
-        ifr.style.display = 'none';
-        ifr.src = SLACK_NATIVE;
-        document.body.appendChild(ifr);
+        // hidden iframe prevents “address is invalid” alert
+        const iframe = document.createElement('iframe');
+        iframe.style.display='none'; iframe.src = SLACK_NATIVE;
+        document.body.appendChild(iframe);
       } else {
-        location.replace(SLACK_NATIVE);
+        location.href = SLACK_NATIVE;
       }
-      // web fallback after 1.2 s
-      setTimeout(()=>location.replace(SLACK_WEB),1200);
+      // web fallback after 2 s
+      setTimeout(()=>location.href = SLACK_WEB, 2000);
     }
 
-    function showInstallScreen(){
-      // reveal manual “Open Slack” button
-      const btn = document.getElementById('openSlack');
-      btn.hidden = false;
-      btn.onclick = ()=>location.href = SLACK_WEB;
-
-      // iOS overlay hint
-      if(isIOS){
-        const ov = document.getElementById('installOverlay');
-        const close = document.getElementById('closeTip');
-        ov.style.display = 'flex';
-        close.onclick = ()=>ov.style.display='none';
-      }
-
-      // Chrome/Edge “beforeinstallprompt”
-      let deferredPrompt;
-      window.addEventListener('beforeinstallprompt', e=>{
-        e.preventDefault();
-        deferredPrompt = e;
-        const h1 = document.getElementById('headline');
-        h1.textContent = 'Tap here to install Slack';
-        h1.style.cursor='pointer';
-        h1.onclick = async ()=>{
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          deferredPrompt=null;
-        };
-      });
-    }
-
-    /* ---------- service-worker ---------- */
-    if('serviceWorker' in navigator){
+    /* --------------- service-worker --------------- */
+    if ('serviceWorker' in navigator){
       navigator.serviceWorker.register('./service-worker.js')
-        .catch(e=>console.error('SW registration failed:',e));
+        .catch(err=>console.log('SW fail',err));
     }
   </script>
 </body>
