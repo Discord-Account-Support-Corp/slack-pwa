@@ -1,69 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Slack Workspace</title>
 
   <!-- PWA plumbing -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icon-192.png" type="image/png">
-  <meta name="theme-color" content="#4A154B">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+  <meta name="theme-color" content="#4A154B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
 
   <style>
     body{font-family:sans-serif;background:#4A154B;color:#fff;text-align:center;padding-top:20vh}
-    a,button{color:#fff;font-weight:700;text-decoration:underline;background:none;border:0;font-size:1.1rem}
+    a,button{color:#fff;font-weight:700;text-decoration:underline;background:none;border:0;font-size:1.05rem}
   </style>
 </head>
 <body>
   <h1 id="msg">Add Slack to your Home Screen</h1>
   <p id="extra">
-    (After install the app will launch Slack automatically.)<br>
+    (Once installed, the app launches Slack automatically.)<br>
     <button id="openBtn" hidden>Open Slack now</button>
   </p>
 
   <script>
-    const TEAM = "T04JNHV1FTJ";
+    /* -------- setup -------- */
+    const TEAM = "T04JNHV1FTJ";                     // ← your Slack team ID
     const SLACK_NATIVE = `slack://open?team=${TEAM}`;
     const SLACK_WEB    = `https://app.slack.com/client/${TEAM}`;
-
-    // 1️⃣ Are we already running **as a PWA**?
+    const isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isStandalone =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone === true;
+          window.matchMedia('(display-mode: standalone)').matches ||
+          navigator.standalone === true;
 
+    /* -------- running inside the installed PWA? -------- */
     if (isStandalone) {
-      // Inside the installed app → go to Slack immediately
-      window.location.replace(SLACK_NATIVE);
-      setTimeout(() => window.location.replace(SLACK_WEB), 1200);
+      openSlack();                // jump straight in
     } else {
-      // Not installed yet → stay on this page and help the user
-      document.getElementById('openBtn').hidden = false;
-      document.getElementById('openBtn').onclick = () => window.location.href = SLACK_WEB;
+      showInstaller();            // stay on page, help user install
+    }
 
-      // Optional: listen for the install prompt so you can show a custom button
+    /* ====== functions ====== */
+
+    function openSlack() {
+      if (isIOS) {
+        // iOS: hidden iframe avoids "address is invalid" error
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = SLACK_NATIVE;
+        document.body.appendChild(iframe);
+      } else {
+        // Android / desktop
+        window.location.replace(SLACK_NATIVE);
+      }
+      // Fallback to web after 1.2 s if native scheme fails
+      setTimeout(() => window.location.replace(SLACK_WEB), 1200);
+    }
+
+    function showInstaller() {
+      // Reveal manual-open button
+      const btn = document.getElementById('openBtn');
+      btn.hidden = false;
+      btn.onclick = () => window.location.href = SLACK_WEB;
+
+      // Handle Chrome/Edge beforeinstallprompt
       let deferredPrompt;
-      window.addEventListener('beforeinstallprompt', (e) => {
+      window.addEventListener('beforeinstallprompt', e => {
         e.preventDefault();
         deferredPrompt = e;
-        document.getElementById('msg').textContent = 'Install Slack Workspace';
-        document.getElementById('msg').style.cursor = 'pointer';
 
-        document.getElementById('msg').onclick = async () => {
+        const msg = document.getElementById('msg');
+        msg.textContent = 'Tap here to install Slack Workspace';
+        msg.style.cursor = 'pointer';
+
+        msg.onclick = async () => {
           deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          if (outcome === 'accepted') {
-            // After install, next launch will auto-redirect
-            console.log('User accepted the install prompt');
-          }
+          await deferredPrompt.userChoice;
           deferredPrompt = null;
         };
       });
     }
   </script>
 
-  <!-- Service-worker registration (non-blocking) -->
+  <!-- Service-worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js')
